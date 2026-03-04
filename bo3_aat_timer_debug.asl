@@ -38,6 +38,7 @@ startup
     settings.Add("AAT_FireWorks", true, "Fire Works (20s)", "AAT Timers");
     settings.Add("AAT_ThunderWall", true, "Thunder Wall (10s)", "AAT Timers");
     settings.Add("AAT_Turned", true, "Turned (15s)", "AAT Timers");
+    settings.Add("AAT_Debug", false, "Show Map & AAT Debug", "AAT Timers");
 
     vars.aatCooldowns = new Dictionary<string, int> {
         {"DeadWire", 100}, {"BlastFurnace", 300}, {"FireWorks", 400}, {"ThunderWall", 200}, {"Turned", 300}
@@ -77,13 +78,64 @@ startup
     });
 
     vars.SetText = (Action<string, object>)((text1, text2) => {
-        string val = text2 != null ? text2.ToString() : "";
-        var comps = timer.Layout.Components.Where(x => x.GetType().Name == "TextComponent");
-        foreach (var c in comps) {
-            var s = c.GetType().GetProperty("Settings").GetValue(c, null);
-            if ((string)s.GetType().GetProperty("Text1").GetValue(s, null) == text1) {
-                s.GetType().GetProperty("Text2").SetValue(s, val);
+        string textValue = text2 != null ? text2.ToString() : "";
+
+        var textSettings = timer.Layout.Components.Where(x => x.GetType().Name == "TextComponent")
+            .Select(x => x.GetType().GetProperty("Settings").GetValue(x, null));
+        var textSetting = textSettings.FirstOrDefault(x => (x.GetType().GetProperty("Text1").GetValue(x, null) as string) == text1);
+
+        if (textSetting != null)
+        {
+            textSetting.GetType().GetProperty("Text2").SetValue(textSetting, textValue);
+        }
+        else if (!string.IsNullOrEmpty(textValue))
+        {
+            try
+            {
+                var textComponentAssembly = Assembly.LoadFrom("Components\\LiveSplit.Text.dll");
+                var textComponent = Activator.CreateInstance(textComponentAssembly.GetType("LiveSplit.UI.Components.TextComponent"), timer);
+                timer.Layout.LayoutComponents.Add(new LiveSplit.UI.Components.LayoutComponent("LiveSplit.Text.dll", textComponent as LiveSplit.UI.Components.IComponent));
+
+                textSetting = textComponent.GetType().GetProperty("Settings", BindingFlags.Instance | BindingFlags.Public).GetValue(textComponent, null);
+                textSetting.GetType().GetProperty("Text1").SetValue(textSetting, text1);
+                textSetting.GetType().GetProperty("Text2").SetValue(textSetting, textValue);
             }
+            catch (Exception ex)
+            {
+            }
+        }
+    });
+
+    vars.RemoveText = (Action<string>)((text1) => {
+        try
+        {
+            var textComponents = timer.Layout.Components.Where(x => x.GetType().Name == "TextComponent").ToList();
+            var componentToRemove = textComponents.FirstOrDefault(x =>
+            {
+                var s = x.GetType().GetProperty("Settings").GetValue(x, null);
+                return (s.GetType().GetProperty("Text1").GetValue(s, null) as string) == text1;
+            });
+
+            if (componentToRemove != null)
+            {
+                var layoutComponentsList = timer.Layout.LayoutComponents as System.Collections.IList;
+                if (layoutComponentsList != null)
+                {
+                    for (int i = layoutComponentsList.Count - 1; i >= 0; i--)
+                    {
+                        var lc = layoutComponentsList[i];
+                        var comp = lc.GetType().GetProperty("Component").GetValue(lc, null);
+                        if (comp == componentToRemove)
+                        {
+                            layoutComponentsList.RemoveAt(i);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
         }
     });
 
@@ -111,13 +163,11 @@ startup
         vars.lastTWTime = -999999;
     });
 
-    vars.componentsCreated = false;
     refreshRate = 100;
 }
 
 init
 {
-    vars.componentsCreated = false;
     vars.Log("--- INIT: Processo conectado ---");
 }
 
@@ -135,7 +185,6 @@ update
 
     // --- MAPA E SLOTS ---
     string map = current.currentMap ?? "";
-    vars.SetText("Map:", string.IsNullOrEmpty(map) ? "---" : map);
 
     byte[] slots;
     if (map.Contains("zm_zod")) {
@@ -169,8 +218,15 @@ update
     }
 
     string currentAAT = vars.activeSlot > 0 ? vars.ByteToAAT(slots[vars.activeSlot-1]) : "None";
-    vars.SetText("AAT:", currentAAT);
-    vars.SetText("Slot:", vars.activeSlot.ToString());
+
+    // --- DEBUG (Map e AAT na mão) ---
+    if (settings["AAT_Debug"]) {
+        vars.SetText("Map:", string.IsNullOrEmpty(map) ? "---" : map);
+        vars.SetText("AAT:", currentAAT);
+    } else {
+        vars.RemoveText("Map:");
+        vars.RemoveText("AAT:");
+    }
 
     // --- MONITORAMENTO DOS GATILHOS + LOG ---
 
@@ -297,7 +353,11 @@ update
         if (vars.aatActive[keys[i]] && (current.levelTime - vars.aatStarts[keys[i]]) >= vars.aatCooldowns[keys[i]]) {
             vars.aatActive[keys[i]] = false;
         }
-        if (!settings[setKeys[i]]) continue;
+
+        if (!settings[setKeys[i]]) {
+            vars.RemoveText(labels[i]);
+            continue;
+        }
 
         if (vars.aatActive[keys[i]]) {
             int rem = vars.aatCooldowns[keys[i]] - (current.levelTime - vars.aatStarts[keys[i]]);
