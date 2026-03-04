@@ -1,7 +1,7 @@
 # bo3-AAT-timers
 minha tentativa de criar um timer para os AATs do black ops 3 zombies usando o livesplit
 
-COMO USAR
+## COMO USAR
 
 1-Obviamente, precisa ter o livesplit baixado.
 
@@ -15,7 +15,7 @@ COMO USAR
 
 6-Irá aparecer alguns check box para voce escolher quais AATs voce quer que o timer monitore, entao marque aqueles que voce irá usar que o timer será criado assim que voce abrir o jogo
 
-OBSERVAÇÕES
+## OBSERVAÇÕES
 
 1-Ele NÂO funciona em coop ainda, irei trabalhar no futuro para fazer isso funcionar
 
