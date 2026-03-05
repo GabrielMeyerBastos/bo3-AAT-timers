@@ -3,7 +3,7 @@ minha tentativa de criar um timer para os AATs do black ops 3 zombies usando o l
 
 ## ATENÇÃO
 
-Esse timer NÃO é permitido pela zwr, ele foi feito para ser usado na ZRBR, então não me responsabilizo caso seja usado para uma partida para a tabela mundial mostrando ele na tela e sua partida seja negada.
+Esse timer NÃO é permitido pela ZWR, ele foi feito para ser usado na ZRBR, então não me responsabilizo caso seja usado para uma partida para a tabela mundial mostrando ele na tela e sua partida seja negada.
 
 ## COMO USAR
 
